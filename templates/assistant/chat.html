@@ -1,0 +1,521 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat - Voice Assistant{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- Chat Interface -->
+        <div class="col-md-8 mx-auto">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-comments me-2"></i>
+                        <h5 class="mb-0">Voice Assistant Chat</h5>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <!-- User Profile Display -->
+                        <div class="d-flex align-items-center me-3">
+                            {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" 
+                                     alt="Profile" 
+                                     class="rounded-circle me-2" 
+                                     style="width: 32px; height: 32px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <span class="text-light">{{ user.username }}</span>
+                        </div>
+                        <a href="{% url 'conversations_list' %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-history me-1"></i>History
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body d-flex flex-column" style="height: 70vh;">
+                    <!-- Messages Container -->
+                    <div id="messages" class="flex-grow-1 overflow-auto mb-3 p-3" style="background-color: #f8f9fa; border-radius: 0.375rem;">
+                        {% if conversation %}
+                            {% for message in conversation.messages.all %}
+                                <div class="message {% if message.sender == 'user' %}user-message{% else %}assistant-message{% endif %} mb-3">
+                                    <div class="d-flex {% if message.sender == 'user' %}justify-content-end{% endif %}">
+                                        <div class="message-content {% if message.sender == 'user' %}bg-primary text-white{% else %}bg-white border{% endif %} rounded p-3" style="max-width: 70%;">
+                                            {% if message.sender == 'user' %}
+                                                <div class="d-flex align-items-center mb-2">
+                                                    {% if user.profile.profile_picture %}
+                                                        <img src="{{ user.profile.profile_picture.url }}" 
+                                                             alt="Profile" 
+                                                             class="rounded-circle me-2" 
+                                                             style="width: 24px; height: 24px; object-fit: cover;">
+                                                    {% else %}
+                                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                                             style="width: 24px; height: 24px;">
+                                                            <i class="fas fa-user text-muted" style="font-size: 0.75rem;"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                    <small class="fw-bold">{{ user.username }}</small>
+                                                </div>
+                                            {% else %}
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-2" 
+                                                             style="width: 24px; height: 24px;">
+                                                            <i class="fas fa-robot text-white" style="font-size: 0.75rem;"></i>
+                                                        </div>
+                                                        <small class="fw-bold text-success">Assistant</small>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-success speak-btn" 
+                                                            data-text="{{ message.text }}" title="Speak this message">
+                                                        <i class="fas fa-volume-up"></i>
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                            <div class="message-text">{{ message.text }}</div>
+                                            <small class="text-muted mt-2 d-block">
+                                                {{ message.created_at|date:"g:i A" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Input Area -->
+                    <div class="input-area">
+                        <form id="chat-form" class="d-flex gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" id="conversation-id" value="{% if conversation %}{{ conversation.id }}{% endif %}">
+                            
+                            <div class="flex-grow-1 position-relative">
+                                <input type="text" id="message-input" class="form-control" placeholder="Type your message or use voice input..." autocomplete="off">
+                                <button type="button" id="voice-btn" class="btn btn-outline-secondary position-absolute end-0 top-0 h-100" style="border: none; border-radius: 0 0.375rem 0.375rem 0;">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                        
+                        <!-- Voice Status -->
+                        <div id="voice-status" class="mt-2 text-center" style="display: none;">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-microphone-alt me-2"></i>
+                                <span id="voice-status-text">Listening...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .message-content {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .user-message .message-content {
+        background: linear-gradient(135deg, #007bff, #0056b3) !important;
+    }
+    
+    .assistant-message .message-content {
+        background: white;
+        border: 1px solid #dee2e6;
+    }
+    
+    .message-text {
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+    
+    #messages {
+        scrollbar-width: thin;
+        scrollbar-color: #adb5bd #f8f9fa;
+    }
+    
+    #messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #messages::-webkit-scrollbar-track {
+        background: #f8f9fa;
+    }
+    
+    #messages::-webkit-scrollbar-thumb {
+        background: #adb5bd;
+        border-radius: 3px;
+    }
+    
+    .input-area {
+        border-top: 1px solid #dee2e6;
+        padding-top: 1rem;
+    }
+    
+    #message-input {
+        padding-right: 50px;
+    }
+    
+    #voice-btn {
+        z-index: 10;
+    }
+    
+    #voice-btn.listening {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .speak-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .speak-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .speak-btn.speaking {
+        background-color: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+</style>
+
+<script>
+let recognition;
+let isListening = false;
+let currentUtterance = null;
+let voicesLoaded = false;
+
+// Load available voices
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        let voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            voicesLoaded = true;
+            console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+            
+            // Log female voices specifically
+            const femaleVoices = voices.filter(voice => {
+                const voiceName = voice.name.toLowerCase();
+                return voice.lang.includes('en') && 
+                       (voiceName.includes('female') || 
+                        voiceName.includes('woman') || 
+                        voiceName.includes('girl') ||
+                        voiceName.includes('samantha') ||
+                        voiceName.includes('victoria') ||
+                        voiceName.includes('alex') ||
+                        voiceName.includes('karen') ||
+                        voiceName.includes('helena') ||
+                        voiceName.includes('zira'));
+            });
+            
+            if (femaleVoices.length > 0) {
+                console.log('Female voices found:', femaleVoices.map(v => `${v.name} (${v.lang})`));
+            } else {
+                console.log('No specific female voices found. Available English voices:');
+                const englishVoices = voices.filter(v => v.lang.includes('en'));
+                console.log(englishVoices.map(v => `${v.name} (${v.lang})`));
+            }
+        }
+    }
+}
+
+// Initialize voices when they become available
+if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices(); // Try to load immediately
+}
+
+// Initialize speech recognition
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+        isListening = true;
+        document.getElementById('voice-btn').classList.add('listening');
+        document.getElementById('voice-status').style.display = 'block';
+        document.getElementById('voice-status-text').textContent = 'Listening...';
+    };
+    
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('message-input').value = transcript;
+        document.getElementById('voice-btn').classList.remove('listening');
+        document.getElementById('voice-status').style.display = 'none';
+        isListening = false;
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        document.getElementById('voice-btn').classList.remove('listening');
+        document.getElementById('voice-status').style.display = 'none';
+        isListening = false;
+    };
+    
+    recognition.onend = function() {
+        document.getElementById('voice-btn').classList.remove('listening');
+        document.getElementById('voice-status').style.display = 'none';
+        isListening = false;
+    };
+}
+
+// Voice button click handler
+document.getElementById('voice-btn').addEventListener('click', function() {
+    if (!recognition) {
+        alert('Speech recognition is not supported in your browser.');
+        return;
+    }
+    
+    if (isListening) {
+        recognition.stop();
+    } else {
+        recognition.start();
+    }
+});
+
+// Chat form submission
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value.trim();
+    const conversationId = document.getElementById('conversation-id').value;
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessage(message, 'user');
+    messageInput.value = '';
+    
+    // Send message to server
+    fetch('/chat/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: new URLSearchParams({
+            'text': message,
+            'conversation_id': conversationId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        addMessage(data.response, 'assistant');
+        if (data.conversation_id && !conversationId) {
+            document.getElementById('conversation-id').value = data.conversation_id;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        addMessage('Sorry, there was an error processing your request.', 'assistant');
+    });
+});
+
+// Text-to-speech functionality
+function speakText(text, button) {
+    if ('speechSynthesis' in window) {
+        // Stop any currently speaking
+        if (currentUtterance) {
+            speechSynthesis.cancel();
+        }
+        
+        // Get available voices
+        let voices = speechSynthesis.getVoices();
+        console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+        
+        // Create new utterance first
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        
+        // Set voice properties for more feminine sound
+        currentUtterance.rate = 0.8; // Slower for more natural sound
+        currentUtterance.pitch = 1.3; // Higher pitch for feminine sound
+        currentUtterance.volume = 1;
+        
+        // Try to find and set a female voice
+        let femaleVoice = null;
+        
+        // Method 1: Look for specific female voice names
+        const femaleNames = ['samantha', 'victoria', 'alex', 'karen', 'helena', 'zira', 'hazel', 'eva', 'maria'];
+        femaleVoice = voices.find(voice => {
+            const name = voice.name.toLowerCase();
+            return voice.lang.includes('en') && femaleNames.some(femaleName => name.includes(femaleName));
+        });
+        
+        // Method 2: Look for voices with 'female' in the name
+        if (!femaleVoice) {
+            femaleVoice = voices.find(voice => 
+                voice.lang.includes('en') && voice.name.toLowerCase().includes('female')
+            );
+        }
+        
+        // Method 3: Look for voices with 'woman' or 'girl' in the name
+        if (!femaleVoice) {
+            femaleVoice = voices.find(voice => {
+                const name = voice.name.toLowerCase();
+                return voice.lang.includes('en') && (name.includes('woman') || name.includes('girl'));
+            });
+        }
+        
+        // Method 4: Try to avoid male voices and pick a neutral one
+        if (!femaleVoice) {
+            const maleNames = ['david', 'james', 'john', 'mike', 'mark', 'peter', 'steve', 'tom', 'chris', 'daniel'];
+            femaleVoice = voices.find(voice => {
+                const name = voice.name.toLowerCase();
+                return voice.lang.includes('en') && !maleNames.some(maleName => name.includes(maleName));
+            });
+        }
+        
+        // Method 5: Just pick any English voice
+        if (!femaleVoice) {
+            femaleVoice = voices.find(voice => voice.lang.includes('en'));
+        }
+        
+        // Set the voice
+        if (femaleVoice) {
+            currentUtterance.voice = femaleVoice;
+            console.log('Using female voice:', femaleVoice.name);
+        } else {
+            console.log('No female voice found, using default');
+        }
+        
+        // Update button state
+        button.classList.add('speaking');
+        button.innerHTML = '<i class="fas fa-stop"></i>';
+        
+        // Event handlers
+        currentUtterance.onstart = function() {
+            button.classList.add('speaking');
+            button.innerHTML = '<i class="fas fa-stop"></i>';
+            console.log('Started speaking with voice:', currentUtterance.voice ? currentUtterance.voice.name : 'default');
+        };
+        
+        currentUtterance.onend = function() {
+            button.classList.remove('speaking');
+            button.innerHTML = '<i class="fas fa-volume-up"></i>';
+            currentUtterance = null;
+        };
+        
+        currentUtterance.onerror = function(event) {
+            console.error('Speech synthesis error:', event);
+            button.classList.remove('speaking');
+            button.innerHTML = '<i class="fas fa-volume-up"></i>';
+            currentUtterance = null;
+        };
+        
+        // Speak the text
+        speechSynthesis.speak(currentUtterance);
+        
+    } else {
+        alert('Text-to-speech is not supported in your browser.');
+    }
+}
+
+// Handle speak button clicks
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.speak-btn')) {
+        const button = e.target.closest('.speak-btn');
+        const text = button.getAttribute('data-text');
+        
+        if (button.classList.contains('speaking')) {
+            // Stop speaking
+            speechSynthesis.cancel();
+            button.classList.remove('speaking');
+            button.innerHTML = '<i class="fas fa-volume-up"></i>';
+            currentUtterance = null;
+        } else {
+            // Start speaking
+            speakText(text, button);
+        }
+    }
+});
+
+function addMessage(text, sender) {
+    const messagesContainer = document.getElementById('messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}-message mb-3`;
+    
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+    });
+    
+    let userDisplay = '';
+    if (sender === 'user') {
+        userDisplay = `
+            <div class="d-flex align-items-center mb-2">
+                {% if user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" 
+                         alt="Profile" 
+                         class="rounded-circle me-2" 
+                         style="width: 24px; height: 24px; object-fit: cover;">
+                {% else %}
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                         style="width: 24px; height: 24px;">
+                        <i class="fas fa-user text-muted" style="font-size: 0.75rem;"></i>
+                    </div>
+                {% endif %}
+                <small class="fw-bold">{{ user.username }}</small>
+            </div>
+        `;
+    } else {
+        userDisplay = `
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-2" 
+                         style="width: 24px; height: 24px;">
+                        <i class="fas fa-robot text-white" style="font-size: 0.75rem;"></i>
+                    </div>
+                    <small class="fw-bold text-success">Assistant</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success speak-btn" 
+                        data-text="${text}" title="Speak this message">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+        `;
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="d-flex ${sender === 'user' ? 'justify-content-end' : ''}">
+            <div class="message-content ${sender === 'user' ? 'bg-primary text-white' : 'bg-white border'} rounded p-3" style="max-width: 70%;">
+                ${userDisplay}
+                <div class="message-text">${text}</div>
+                <small class="text-muted mt-2 d-block">${currentTime}</small>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Auto-scroll to bottom on page load
+window.addEventListener('load', function() {
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+});
+</script>
+{% endblock %} 

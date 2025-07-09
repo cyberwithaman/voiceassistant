@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Conversation Detail - Voice Assistant{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h2 class="mb-4">Conversation #{{ conversation.id }}</h2>
+    <a href="/conversations/" class="btn btn-outline-secondary mb-3">Back to List</a>
+    <div class="border rounded p-3 bg-light mb-3" style="min-height: 200px;">
+      {% for msg in conversation.messages.all %}
+        <div class="mb-2">
+          <strong>{{ msg.sender|title }}:</strong> {{ msg.text }}
+          <span class="text-muted small">({{ msg.created_at|date:'Y-m-d H:i' }})</span>
+        </div>
+      {% empty %}
+        <div class="text-muted">No messages in this conversation.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %} 

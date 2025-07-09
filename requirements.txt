@@ -1,0 +1,6 @@
+Django
+django-environ
+requests
+Pillow
+psutil
+psycopg2-binary

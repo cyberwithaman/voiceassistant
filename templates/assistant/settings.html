@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-user-cog text-primary me-2"></i>Profile Settings
+                    </h2>
+                    <p class="text-muted mb-0">Manage your account information and preferences</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back
+                    </a>
+                    <button type="submit" form="profile-form" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Alert Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form id="profile-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row g-4">
+                    <!-- Profile Picture Section -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-header bg-gradient-primary text-white text-center py-4">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-camera me-2"></i>Profile Picture
+                                </h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="mb-4">
+                                    {% if user_profile.profile_picture %}
+                                        <img src="{{ user_profile.profile_picture.url }}" 
+                                             alt="Profile Picture" 
+                                             class="rounded-circle img-thumbnail border-3 border-primary" 
+                                             style="width: 150px; height: 150px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                    {% else %}
+                                        <div class="rounded-circle bg-light border-3 border-primary d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                             style="width: 150px; height: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                            <i class="fas fa-user text-muted" style="font-size: 4rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="{{ profile_form.profile_picture.id_for_label }}" class="form-label fw-bold">
+                                        <i class="fas fa-upload me-1"></i>Upload New Picture
+                                    </label>
+                                    <div class="input-group">
+                                        {{ profile_form.profile_picture }}
+                                    </div>
+                                    {% if profile_form.profile_picture.errors %}
+                                        <div class="text-danger small mt-2">{{ profile_form.profile_picture.errors.0 }}</div>
+                                    {% endif %}
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Recommended: Square image, max 5MB
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Information -->
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-gradient-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user me-2"></i>Personal Information
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row g-3">
+                                    <!-- First Name -->
+                                    <div class="col-md-6">
+                                        <label for="{{ user_form.first_name.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user me-1 text-primary"></i>First Name
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-user text-muted"></i>
+                                            </span>
+                                            {{ user_form.first_name }}
+                                        </div>
+                                        {% if user_form.first_name.errors %}
+                                            <div class="text-danger small mt-1">{{ user_form.first_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Last Name -->
+                                    <div class="col-md-6">
+                                        <label for="{{ user_form.last_name.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user me-1 text-primary"></i>Last Name
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-user text-muted"></i>
+                                            </span>
+                                            {{ user_form.last_name }}
+                                        </div>
+                                        {% if user_form.last_name.errors %}
+                                            <div class="text-danger small mt-1">{{ user_form.last_name.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Email -->
+                                    <div class="col-12">
+                                        <label for="{{ user_form.email.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-envelope me-1 text-primary"></i>Email Address
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-envelope text-muted"></i>
+                                            </span>
+                                            {{ user_form.email }}
+                                        </div>
+                                        {% if user_form.email.errors %}
+                                            <div class="text-danger small mt-1">{{ user_form.email.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Username (Read-only) -->
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-at me-1 text-primary"></i>Username
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-at text-muted"></i>
+                                            </span>
+                                            <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-lock me-1"></i>Username cannot be changed
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Phone Number -->
+                                    <div class="col-md-6">
+                                        <label for="{{ profile_form.phone_number.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-phone me-1 text-primary"></i>Phone Number
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-phone text-muted"></i>
+                                            </span>
+                                            {{ profile_form.phone_number }}
+                                        </div>
+                                        {% if profile_form.phone_number.errors %}
+                                            <div class="text-danger small mt-1">{{ profile_form.phone_number.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Bio -->
+                                    <div class="col-12">
+                                        <label for="{{ profile_form.bio.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-info-circle me-1 text-primary"></i>Bio
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-info-circle text-muted"></i>
+                                            </span>
+                                            {{ profile_form.bio }}
+                                        </div>
+                                        {% if profile_form.bio.errors %}
+                                            <div class="text-danger small mt-1">{{ profile_form.bio.errors.0 }}</div>
+                                        {% endif %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-lightbulb me-1"></i>Tell us a bit about yourself (optional)
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Section -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-gradient-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-shield-alt me-2"></i>Security Settings
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6 class="mb-2">
+                                            <i class="fas fa-key me-2 text-warning"></i>Change Password
+                                        </h6>
+                                        <p class="text-muted mb-0">
+                                            Update your password to keep your account secure. Use a strong password with at least 8 characters.
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <a href="{% url 'password_change' %}" class="btn btn-outline-warning">
+                                            <i class="fas fa-key me-1"></i>Change Password
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+    }
+    
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+    }
+    
+    .card {
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border: none;
+        padding: 1.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        transform: translateY(-1px);
+    }
+    
+    .form-control[readonly] {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+    
+    .input-group-text {
+        border: 1px solid #e9ecef;
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+    
+    .btn {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .alert {
+        border-radius: 0.75rem;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .form-label {
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .border-3 {
+        border-width: 3px !important;
+    }
+    
+    /* Custom file input styling */
+    input[type="file"] {
+        padding: 0.5rem;
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        background-color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+    
+    input[type="file"]:hover {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1.5rem !important;
+        }
+        
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock %} 
